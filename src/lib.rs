@@ -7,6 +7,27 @@ macro_rules! compute{
     ($bind:expr, $unit:expr => $var:ident <- $e:expr; $($rest:tt)+) => {
         $bind($e, move |$var| compute!($bind, $unit => $($rest)+))
     };
+
+    ($bind:expr, $unit:expr => let $var:pat = $e:expr ; $($rest:tt)+) => {
+        { 
+            let $var = $e;
+            compute!($bind, $unit => $($rest)+)
+        }
+    };
+
+    ($bind:expr, $unit:expr => let $var:ident : $var_type:ty = $e:expr ; $($rest:tt)+) => {
+        { 
+            let $var : $var_type = $e;
+            compute!($bind, $unit => $($rest)+)
+        }
+    };
+
+    ($bind:expr, $unit:expr => let $var:pat | $var_type:ty = $e:expr ; $($rest:tt)+) => {
+        { 
+            let $var : $var_type = $e;
+            compute!($bind, $unit => $($rest)+)
+        }
+    };
 }
 
 #[cfg(test)]
@@ -67,5 +88,68 @@ mod tests {
         };
 
         assert_eq!( output, vec![1, 1, 1, 2, 2, 2, 3, 3, 3] );
+    }
+
+    #[test]
+    fn should_compute_with_let() {
+        let output = compute!{ v_bind, v_unit => 
+            x <- vec![1,2,3];
+            let y = 7;
+            w <- vec![1,2,3];
+            unit x + y + w
+        };
+
+        assert_eq!( output, vec![9, 10, 11, 10, 11, 12, 11, 12, 13] );
+    }
+
+    #[test]
+    fn should_compute_with_let_with_type() {
+        let output = compute!{ v_bind, v_unit => 
+            x <- vec![1,2,3];
+            let y : u32 = 7;
+            w <- vec![1,2,3];
+            unit x + y + w
+        };
+
+        assert_eq!( output, vec![9, 10, 11, 10, 11, 12, 11, 12, 13] );
+    }
+
+    #[test]
+    fn should_compute_with_let_with_pattern() {
+        let output = compute!{ v_bind, v_unit => 
+            x <- vec![1,2,3];
+            let (y, h) = (7, 8);
+            w <- vec![1,2,3];
+            unit x + y + w + h
+        };
+
+        assert_eq!( output, vec![17, 18, 19, 18, 19, 20, 19, 20, 21] );
+    }
+
+    #[test]
+    fn should_compute_with_let_with_pattern_with_type() {
+        let output = compute!{ v_bind, v_unit => 
+            x <- vec![1,2,3];
+            let (y, h) | (u32, u32) = (7, 8);
+            w <- vec![1,2,3];
+            unit x + y + w + h
+        };
+
+        assert_eq!( output, vec![17, 18, 19, 18, 19, 20, 19, 20, 21] );
+    }
+
+    #[test]
+    fn should_compute_with_block_expr_in_let() {
+        let output = compute!{ v_bind, v_unit => 
+            x <- vec![1,2,3];
+            let y = { let a = 1;
+                      let b = 2;
+                      a + b
+                    };
+            w <- vec![1,2,3];
+            unit x + y + w 
+        };
+
+        assert_eq!( output, vec![5, 6, 7, 6, 7, 8, 7, 8, 9] );
     }
 }
