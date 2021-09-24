@@ -5,7 +5,7 @@ macro_rules! compute{
     };
 
     ($bind:expr, $unit:expr => $var:ident <- $e:expr; $($rest:tt)+) => {
-        $bind($e, |$var| compute!($bind, $unit => $($rest)+))
+        $bind($e, move |$var| compute!($bind, $unit => $($rest)+))
     };
 }
 
